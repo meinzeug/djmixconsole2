@@ -24,6 +24,8 @@ export interface PlayerState {
   playbackTime: number;
   volume: number;
   pitch: number;
+  /** Maximum pitch deviation from 1.0 (0.08 = +-8%) */
+  pitchRange: number;
   bpm: number;
   hotCues: HotCue[];
   activeLoop: Loop | null;
@@ -65,6 +67,8 @@ export interface Actions {
   seek: (deckId: number, time: number) => void;
   setVolume: (deckId: number, volume: number) => void;
   setPitch: (deckId: number, pitch: number) => void;
+  setPitchRange: (deckId: number, range: number) => void;
+  nudge: (deckId: number, delta: number) => void;
   toggleSync: (deckId: number) => void;
   setHotCue: (deckId: number, cueId: number) => void;
   deleteHotCue: (deckId: number, cueId: number) => void;

@@ -13,7 +13,7 @@ interface PlayerProps {
 
 const Player: React.FC<PlayerProps> = ({ deckId, useStore }) => {
   const playerState = (useStore as any)((state: DjStore) => state.players[deckId]);
-  const { loadTrack, togglePlay, setPitch, setHotCue, jumpToHotCue, deleteHotCue, setLoop, clearLoop, toggleSync, syncPlayers } =
+  const { loadTrack, togglePlay, setPitch, setPitchRange, nudge, setHotCue, jumpToHotCue, deleteHotCue, setLoop, clearLoop, toggleSync, syncPlayers } =
     (useStore as any)((state: DjStore) => state.actions);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -32,7 +32,8 @@ const Player: React.FC<PlayerProps> = ({ deckId, useStore }) => {
   const deckColor = deckId === 0 ? 'cyan' : 'red';
 
   const handlePitchChange = (value: number) => {
-    const newPitch = 0.5 + value; // map 0-1 to 0.5-1.5
+    const range = playerState.pitchRange;
+    const newPitch = (1 - range) + value * (range * 2);
     setPitch(deckId, newPitch);
   };
 
@@ -51,10 +52,20 @@ const Player: React.FC<PlayerProps> = ({ deckId, useStore }) => {
         <JogWheel deckId={deckId} useStore={useStore} />
         <div className="h-48 flex flex-col items-center">
           <Fader
-            value={playerState.pitch - 0.5}
+            value={(playerState.pitch - (1 - playerState.pitchRange)) / (playerState.pitchRange * 2)}
             onChange={handlePitchChange}
             orientation="vertical"
           />
+          <div className="flex gap-1 mt-1">
+            <button
+              onClick={() => setPitchRange(deckId, 0.08)}
+              className={`px-1 text-xs rounded bg-gray-700 hover:bg-gray-600 text-${deckColor}-400`}
+            >8%</button>
+            <button
+              onClick={() => setPitchRange(deckId, 0.16)}
+              className={`px-1 text-xs rounded bg-gray-700 hover:bg-gray-600 text-${deckColor}-400`}
+            >16%</button>
+          </div>
           <span className={`text-xs font-bold mt-1 text-${deckColor}-400`}>Pitch</span>
         </div>
       </div>
