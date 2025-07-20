@@ -25,6 +25,7 @@ const createInitialPlayerState = (): State['players'][0] => ({
   playbackTime: 0,
   volume: 1,
   pitch: 1.0,
+  pitchRange: 0.08,
   bpm: 120,
   hotCues: [],
   activeLoop: null,
@@ -140,6 +141,22 @@ const useStore = create<DjStore>()(
          });
          if(playerNodes[deckId].source){
              playerNodes[deckId].source!.playbackRate.value = pitch;
+         }
+      },
+      setPitchRange: (deckId, range) => {
+         set(state => {
+           state.players[deckId].pitchRange = range;
+           const value = Math.max(1 - range, Math.min(1 + range, state.players[deckId].pitch));
+           state.players[deckId].pitch = value;
+         });
+         if(playerNodes[deckId].source){
+             playerNodes[deckId].source!.playbackRate.value = get().players[deckId].pitch;
+         }
+      },
+      nudge: (deckId, delta) => {
+         const source = playerNodes[deckId].source;
+         if (source) {
+           source.playbackRate.value = get().players[deckId].pitch + delta;
          }
       },
       setVolume: (deckId, volume) => {

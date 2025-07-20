@@ -75,7 +75,7 @@ const Touchscreen: React.FC<TouchscreenProps> = ({ deckId, useStore }) => {
       </div>
       {track && (
         <div className="absolute top-2 right-2 text-xs text-white bg-black/50 p-1 rounded">
-          {Math.round(bpm)} BPM | {(pitch * 100).toFixed(1)}%
+          {Math.round(bpm * pitch)} BPM | {(pitch * 100).toFixed(1)}%
         </div>
       )}
       <div className="absolute bottom-2 right-2 text-lg font-mono font-bold text-white bg-black/50 p-1 rounded">
