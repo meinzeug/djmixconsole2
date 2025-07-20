@@ -27,7 +27,7 @@ Running the script in **update** mode pulls the latest repository files, rebuild
 
 ## Deutsch
 
-Dieses Repository enthält die **AI DJ Mix Console**, eine webbasierte Anwendung, die zwei Pioneer CDJ‑3000 Player und einen DJM‑A9 Mixer simuliert. Die komplette Steuerung erfolgt über die Tastatur. Eigene MP3s können geladen und mit Waveform-Ansicht, EQs und Effekten gemixt werden.
+Dieses Repository enthält die **DJ Mix Console**, eine webbasierte Anwendung, die zwei Pioneer CDJ‑3000 Player und einen DJM‑A9 Mixer simuliert. Die komplette Steuerung erfolgt über die Tastatur. Eigene MP3s können geladen und mit Waveform-Ansicht, EQs und Effekten gemixt werden.
 
 ### Installation auf einem Ubuntu-Server
 
