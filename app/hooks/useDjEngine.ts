@@ -77,9 +77,12 @@ const useStore = create<DjStore>()(
         }
       },
       loadTrack: async (deckId, file) => {
-        if (get().players[deckId].isPlaying) {
-            playerNodes[deckId].source?.stop();
-        }
+        // Always stop and disconnect any currently playing source on this deck
+        // before loading the new track to avoid multiple tracks playing
+        // simultaneously.
+        playerNodes[deckId].source?.stop();
+        playerNodes[deckId].source?.disconnect();
+        playerNodes[deckId].source = null;
         const arrayBuffer = await file.arrayBuffer();
         const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
         const waveform = processAudioBuffer(audioBuffer);
