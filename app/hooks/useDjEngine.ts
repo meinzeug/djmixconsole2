@@ -1,13 +1,35 @@
 import { useEffect } from 'react';
 import { create, StoreApi } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
-import type { DjStore, State } from '../types';
+import type { DjStore, State, FXState } from '../types';
 import { processAudioBuffer } from '../utils/audioUtils';
 import detectBpm from 'bpm-detective';
 
 // AudioNodes can't be stored in Zustand state directly. We manage them here.
 const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
 const masterGain = audioContext.createGain();
+const masterEq = {
+  low: audioContext.createBiquadFilter(),
+  mid: audioContext.createBiquadFilter(),
+  high: audioContext.createBiquadFilter(),
+};
+masterEq.low.type = 'lowshelf';
+masterEq.low.frequency.value = 200;
+masterEq.mid.type = 'peaking';
+masterEq.mid.frequency.value = 1000;
+masterEq.mid.Q.value = 0.5;
+masterEq.high.type = 'highshelf';
+masterEq.high.frequency.value = 10000;
+masterEq.low.connect(masterEq.mid).connect(masterEq.high).connect(masterGain).connect(audioContext.destination);
+
+const beatFx = {
+  input: audioContext.createGain(),
+  delay: audioContext.createDelay(),
+  output: audioContext.createGain(),
+};
+beatFx.input.connect(beatFx.delay).connect(beatFx.output).connect(masterGain);
+beatFx.delay.delayTime.value = 0.25;
+
 let mediaRecorder: MediaRecorder | null = null;
 let audioChunks: Blob[] = [];
 
@@ -16,6 +38,8 @@ interface AudioNodes {
   gain: GainNode;
   panner: StereoPannerNode;
   eq: { high: BiquadFilterNode; mid: BiquadFilterNode; low: BiquadFilterNode };
+  colorFx: BiquadFilterNode;
+  beatSend: GainNode;
 }
 const playerNodes: AudioNodes[] = [];
 
@@ -36,11 +60,22 @@ const createInitialMixerState = (): State['mixer'] => ({
   masterVolume: 0.8,
   crossfader: 0,
   masterBpm: 120,
+  master: { gain: 0.5, eq: { high: 0.5, mid: 0.5, low: 0.5 }, fader: 1 },
   channels: {
     1: { gain: 0.5, eq: { high: 0.5, mid: 0.5, low: 0.5 }, fader: 1, cue: false },
     2: { gain: 0.5, eq: { high: 0.5, mid: 0.5, low: 0.5 }, fader: 1, cue: false },
-    3: { gain: 0.5, eq: { high: 0.5, mid: 0.5, low: 0.5 }, fader: 0, cue: false },
-    4: { gain: 0.5, eq: { high: 0.5, mid: 0.5, low: 0.5 }, fader: 0, cue: false },
+  },
+});
+
+const createInitialFxState = (): FXState => ({
+  colorFxType: 'Filter',
+  colorFxAmount: { 1: 0, 2: 0 },
+  beatFx: {
+    active: false,
+    effect: 'Echo',
+    target: 'Master',
+    beatLength: 1,
+    depth: 0.5,
   },
 });
 
@@ -53,16 +88,29 @@ const createPlayerAudioNodes = (): AudioNodes => {
     mid.type = 'peaking'; mid.frequency.value = 1000; mid.Q.value = 0.5;
     const low = audioContext.createBiquadFilter();
     low.type = 'lowshelf'; low.frequency.value = 200;
+    const colorFx = audioContext.createBiquadFilter();
+    const beatSend = audioContext.createGain();
+    beatSend.gain.value = 0;
 
-    gain.connect(low).connect(mid).connect(high).connect(panner).connect(masterGain);
-    
-    return { source: null, gain, panner, eq: { high, mid, low } };
+    gain
+      .connect(low)
+      .connect(mid)
+      .connect(high)
+      .connect(colorFx)
+      .connect(panner);
+    panner.connect(masterGain);
+    panner.connect(beatSend);
+
+    beatSend.connect(beatFx.input);
+
+    return { source: null, gain, panner, eq: { high, mid, low }, colorFx, beatSend };
 }
 
 const useStore = create<DjStore>()(
   immer((set, get) => ({
     players: [createInitialPlayerState(), createInitialPlayerState()],
     mixer: createInitialMixerState(),
+    fx: createInitialFxState(),
     activeChannel: 1,
     isRecording: false,
     actions: {
@@ -71,7 +119,6 @@ const useStore = create<DjStore>()(
           audioContext.resume();
         }
         if (!playerNodes.length) {
-          masterGain.connect(audioContext.destination);
           for (let i = 0; i < 2; i++) {
               playerNodes[i] = createPlayerAudioNodes();
           }
@@ -190,7 +237,9 @@ const useStore = create<DjStore>()(
       clearLoop: (deckId) => {
         set(state => { state.players[deckId].activeLoop = null; });
       },
-      setMasterVolume: (volume) => set(state => { state.mixer.masterVolume = volume; }),
+      setMasterVolume: (volume) => set(state => { state.mixer.masterVolume = volume; state.mixer.master.fader = volume; }),
+      setMasterGain: (value) => set(state => { state.mixer.master.gain = value; }),
+      setMasterEq: (band, value) => set(state => { state.mixer.master.eq[band] = value; }),
       setCrossfader: (value) => set(state => { state.mixer.crossfader = value; }),
       setMasterBpm: (bpm) => {
           set(state => { state.mixer.masterBpm = bpm; });
@@ -250,6 +299,14 @@ const useStore = create<DjStore>()(
       },
       toggleChannelCue: (channelId) => set(state => { state.mixer.channels[channelId].cue = !state.mixer.channels[channelId].cue; }),
       setActiveChannel: (channelId) => set({ activeChannel: channelId }),
+
+      setColorFxType: (type) => set(state => { state.fx.colorFxType = type; }),
+      setColorFxAmount: (channelId, amount) => set(state => { state.fx.colorFxAmount[channelId] = amount; }),
+      setBeatFxActive: (active) => set(state => { state.fx.beatFx.active = active; }),
+      setBeatFxEffect: (effect) => set(state => { state.fx.beatFx.effect = effect; }),
+      setBeatFxTarget: (target) => set(state => { state.fx.beatFx.target = target; }),
+      setBeatFxBeatLength: (len) => set(state => { state.fx.beatFx.beatLength = len; }),
+      setBeatFxDepth: (depth) => set(state => { state.fx.beatFx.depth = depth; }),
       toggleRecording: () => {
           const { isRecording } = get();
           if (isRecording) {
@@ -283,17 +340,35 @@ const useStore = create<DjStore>()(
 );
 
 useStore.subscribe(state => {
-  masterGain.gain.value = state.mixer.masterVolume;
+  masterGain.gain.value = state.mixer.masterVolume * state.mixer.master.fader * state.mixer.master.gain;
+  masterEq.high.gain.value = (state.mixer.master.eq.high - 0.5) * 40;
+  masterEq.mid.gain.value = (state.mixer.master.eq.mid - 0.5) * 40;
+  masterEq.low.gain.value = (state.mixer.master.eq.low - 0.5) * 40;
+
   for (let i = 0; i < 2; i++) {
     const channelId = i + 1;
     const channel = state.mixer.channels[channelId];
-    const cross = i === 0
-      ? (1 - state.mixer.crossfader) / 2
-      : (1 + state.mixer.crossfader) / 2;
-
+    const cross = i === 0 ? (1 - state.mixer.crossfader) / 2 : (1 + state.mixer.crossfader) / 2;
     const volume = state.players[i].volume;
     playerNodes[i].gain.gain.value = volume * channel.gain * channel.fader * cross;
+
+    const amt = state.fx.colorFxAmount[channelId] || 0;
+    if (state.fx.colorFxType === 'Filter') {
+      if (amt >= 0) {
+        playerNodes[i].colorFx.type = 'lowpass';
+        playerNodes[i].colorFx.frequency.value = 20000 - amt * 19000;
+      } else {
+        playerNodes[i].colorFx.type = 'highpass';
+        playerNodes[i].colorFx.frequency.value = 20 + (-amt) * 990;
+      }
+    }
+
+    const send = (state.fx.beatFx.active && (state.fx.beatFx.target === `CH${channelId}` || state.fx.beatFx.target === 'Master')) ? state.fx.beatFx.depth : 0;
+    playerNodes[i].beatSend.gain.value = send;
   }
+
+  beatFx.delay.delayTime.value = (60 / state.mixer.masterBpm) * state.fx.beatFx.beatLength;
+  beatFx.output.gain.value = state.fx.beatFx.depth;
 });
 
 const useDjEngine = () => {

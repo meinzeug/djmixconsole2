@@ -46,7 +46,7 @@ const App: React.FC = () => {
     if (e.code === 'Enter') actions.togglePlay(1);
 
     // Mixer Controls
-    if (['1', '2', '3', '4'].includes(e.key)) actions.setActiveChannel(parseInt(e.key));
+    if (['1', '2'].includes(e.key)) actions.setActiveChannel(parseInt(e.key));
     
     if (e.key === 'ArrowUp') actions.setChannelGain(activeChannel, Math.min(1, mixer.channels[activeChannel].gain + 0.05));
     if (e.key === 'ArrowDown') actions.setChannelGain(activeChannel, Math.max(0, mixer.channels[activeChannel].gain - 0.05));

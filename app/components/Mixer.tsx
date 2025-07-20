@@ -3,6 +3,8 @@ import React from 'react';
 import type { StoreApi } from 'zustand';
 import type { DjStore } from '../types';
 import ChannelStrip from './mixer/ChannelStrip';
+import MasterChannel from './mixer/MasterChannel';
+import BeatFxPanel from './mixer/BeatFxPanel';
 import Fader from './ui/Fader';
 
 interface MixerProps {
@@ -11,8 +13,9 @@ interface MixerProps {
 
 const Mixer: React.FC<MixerProps> = ({ useStore }) => {
   const mixer = (useStore as any)((state: DjStore) => state.mixer);
+  const fx = (useStore as any)((state: DjStore) => state.fx);
   const isRecording = (useStore as any)((state: DjStore) => state.isRecording);
-  const { setCrossfader, toggleRecording, setMasterBpm, syncPlayers } = (useStore as any)((state: DjStore) => state.actions);
+  const { setCrossfader, toggleRecording, setMasterBpm, syncPlayers, setColorFxType } = (useStore as any)((state: DjStore) => state.actions);
   const masterBpm = mixer.masterBpm;
 
   return (
@@ -20,9 +23,17 @@ const Mixer: React.FC<MixerProps> = ({ useStore }) => {
       <div className="flex justify-center items-start flex-grow gap-2">
         <ChannelStrip channelId={1} useStore={useStore} deckColor="cyan" />
         <ChannelStrip channelId={2} useStore={useStore} deckColor="red" />
-        {/* Channels 3 and 4 are for future expansion */}
-        <div className="w-1/4 h-full bg-gray-800/30 rounded-md border border-gray-700 flex flex-col p-2 opacity-50"><span className="text-xs text-center text-gray-500">CH 3</span></div>
-        <div className="w-1/4 h-full bg-gray-800/30 rounded-md border border-gray-700 flex flex-col p-2 opacity-50"><span className="text-xs text-center text-gray-500">CH 4</span></div>
+        <MasterChannel useStore={useStore} />
+        <BeatFxPanel useStore={useStore} />
+      </div>
+
+      <div className="flex items-center justify-between text-xs px-2">
+        <label className="mr-2 text-gray-300">Color FX</label>
+        <select value={fx.colorFxType} onChange={e => setColorFxType(e.target.value)} className="bg-gray-800 text-white rounded p-1">
+          {["Filter", "Dub Echo", "Sweep", "Noise", "Crush", "Space", "Shimmer", "Chorus", "Short Delay", "Long Delay"].map(t => (
+            <option key={t} value={t}>{t}</option>
+          ))}
+        </select>
       </div>
 
       <div className="flex items-center space-x-4 px-4">
