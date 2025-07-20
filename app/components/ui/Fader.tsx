@@ -20,10 +20,10 @@ const Fader: React.FC<FaderProps> = ({ value, onChange, orientation = 'vertical'
         step="0.01"
         value={value}
         onChange={(e) => onChange(parseFloat(e.target.value))}
-        className={`w-full h-full appearance-none bg-transparent cursor-pointer ${
-          isVertical ? '[writing-mode:bt-lr]' : ''
-        }`}
+        className="w-full h-full appearance-none bg-transparent cursor-pointer"
         style={{
+          writingMode: isVertical ? 'bt-lr' : 'lr',
+          WebkitAppearance: isVertical ? 'slider-vertical' : 'slider-horizontal',
           '--thumb-bg': '#4b5563', // gray-600
           '--thumb-border': '#374151', // gray-700
         } as React.CSSProperties}
