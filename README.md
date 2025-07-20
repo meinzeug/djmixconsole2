@@ -1,8 +1,8 @@
-# DJ Mix Console 2 / AI DJ Mix Console
+# DJ Mix Console 2 
 
 ## English
 
-This project contains **AI DJ Mix Console**, a web‑based application that simulates two Pioneer CDJ‑3000 players and a DJM‑A9 mixer. You can control the entire setup using your keyboard, load your own MP3 files and perform mixes with waveform visualisation, EQs and effects.
+This project contains **DJ Mix Console**, a web‑based application that simulates two Pioneer CDJ‑3000 players and a DJM‑A9 mixer. You can control the entire setup using your keyboard, load your own MP3 files and perform mixes with waveform visualisation, EQs and effects.
 
 ### Installation on Ubuntu Server
 
