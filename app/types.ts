@@ -5,6 +5,7 @@ export interface Track {
   buffer: AudioBuffer;
   waveform: number[];
   duration: number;
+  bpm: number;
 }
 
 export interface HotCue {
@@ -23,6 +24,7 @@ export interface PlayerState {
   playbackTime: number;
   volume: number;
   pitch: number;
+  bpm: number;
   hotCues: HotCue[];
   activeLoop: Loop | null;
   isSync: boolean;
@@ -31,6 +33,7 @@ export interface PlayerState {
 export interface MixerState {
   masterVolume: number;
   crossfader: number; // -1 (left) to 1 (right)
+  masterBpm: number;
   channels: {
     [key: number]: {
       gain: number;
@@ -76,6 +79,9 @@ export interface Actions {
   setChannelFader: (channelId: number, value: number) => void;
   toggleChannelCue: (channelId: number) => void;
   setActiveChannel: (channelId: number) => void;
+
+  setMasterBpm: (bpm: number) => void;
+  syncPlayers: () => void;
 
   toggleRecording: () => void;
   initAudio: () => void;

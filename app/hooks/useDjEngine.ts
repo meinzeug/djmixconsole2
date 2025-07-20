@@ -3,6 +3,7 @@ import { create, StoreApi } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import type { DjStore, State } from '../types';
 import { processAudioBuffer } from '../utils/audioUtils';
+import detectBpm from 'bpm-detective';
 
 // AudioNodes can't be stored in Zustand state directly. We manage them here.
 const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -24,6 +25,7 @@ const createInitialPlayerState = (): State['players'][0] => ({
   playbackTime: 0,
   volume: 1,
   pitch: 1.0,
+  bpm: 120,
   hotCues: [],
   activeLoop: null,
   isSync: false,
@@ -32,6 +34,7 @@ const createInitialPlayerState = (): State['players'][0] => ({
 const createInitialMixerState = (): State['mixer'] => ({
   masterVolume: 0.8,
   crossfader: 0,
+  masterBpm: 120,
   channels: {
     1: { gain: 0.5, eq: { high: 0.5, mid: 0.5, low: 0.5 }, fader: 1, cue: false },
     2: { gain: 0.5, eq: { high: 0.5, mid: 0.5, low: 0.5 }, fader: 1, cue: false },
@@ -80,6 +83,12 @@ const useStore = create<DjStore>()(
         const arrayBuffer = await file.arrayBuffer();
         const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
         const waveform = processAudioBuffer(audioBuffer);
+        let bpm = 120;
+        try {
+          bpm = detectBpm(audioBuffer);
+        } catch {
+          bpm = 120;
+        }
         set(state => {
           state.players[deckId].track = {
             name: file.name,
@@ -87,9 +96,12 @@ const useStore = create<DjStore>()(
             buffer: audioBuffer,
             waveform,
             duration: audioBuffer.duration,
+            bpm,
           };
           state.players[deckId].playbackTime = 0;
           state.players[deckId].isPlaying = false;
+          state.players[deckId].bpm = bpm;
+          state.players[deckId].pitch = state.mixer.masterBpm / bpm;
         });
       },
       togglePlay: (deckId) => {
@@ -154,6 +166,42 @@ const useStore = create<DjStore>()(
       clearLoop: () => {},
       setMasterVolume: (volume) => set(state => { state.mixer.masterVolume = volume; }),
       setCrossfader: (value) => set(state => { state.mixer.crossfader = value; }),
+      setMasterBpm: (bpm) => {
+          set(state => { state.mixer.masterBpm = bpm; });
+          get().players.forEach((player, deckId) => {
+            if (player.track) {
+              const newPitch = bpm / player.bpm;
+              set(s => { s.players[deckId].pitch = newPitch; });
+              if (playerNodes[deckId].source) {
+                playerNodes[deckId].source!.playbackRate.value = newPitch;
+              }
+            }
+          });
+      },
+      syncPlayers: () => {
+          const state = get();
+          if (!state.players[0].track || !state.players[1].track) return;
+          const master = state.players[0].isPlaying ? 0 : (state.players[1].isPlaying ? 1 : 0);
+          const other = master === 0 ? 1 : 0;
+          const beat = 60 / state.mixer.masterBpm;
+          const tMaster = state.players[master].playbackTime;
+          const tOther = state.players[other].playbackTime;
+          const diff = (tMaster % beat) - (tOther % beat);
+          let newTime = tOther + diff;
+          const duration = state.players[other].track!.duration;
+          newTime = ((newTime % duration) + duration) % duration;
+          set(s => { s.players[other].playbackTime = newTime; });
+          if (state.players[other].isPlaying) {
+            playerNodes[other].source?.stop();
+            const source = audioContext.createBufferSource();
+            source.buffer = state.players[other].track!.buffer;
+            source.playbackRate.value = state.players[other].pitch;
+            source.connect(playerNodes[other].gain);
+            source.start(0, newTime);
+            playerNodes[other].source = source;
+            (playerNodes[other].source as any)._startTime = audioContext.currentTime;
+          }
+      },
       setChannelGain: (channelId, gain) => {
           const deckId = channelId - 1;
           if (deckId >= 0 && deckId < 2) {
