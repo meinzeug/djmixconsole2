@@ -1,5 +1,5 @@
 
-import React, { useRef, ChangeEvent } from 'react';
+import React, { useState } from 'react';
 import type { StoreApi } from 'zustand';
 import type { DjStore } from '../types';
 import Touchscreen from './player/Touchscreen';
@@ -16,17 +16,15 @@ const Player: React.FC<PlayerProps> = ({ deckId, useStore }) => {
   const { loadTrack, togglePlay, setPitch, setPitchRange, nudge, setHotCue, jumpToHotCue, deleteHotCue, setLoop, clearLoop, toggleSync, syncPlayers } =
     (useStore as any)((state: DjStore) => state.actions);
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [playlist, setPlaylist] = useState<File[]>([]);
 
-  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      loadTrack(deckId, file);
-    }
+  const handleSelectTrack = (file: File) => {
+    loadTrack(deckId, file);
   };
 
-  const handleUploadClick = () => {
-    fileInputRef.current?.click();
+  const handleFileSelected = (file: File) => {
+    setPlaylist(p => [...p, file]);
+    loadTrack(deckId, file);
   };
 
   const deckColor = deckId === 0 ? 'cyan' : 'red';
@@ -47,7 +45,13 @@ const Player: React.FC<PlayerProps> = ({ deckId, useStore }) => {
 
   return (
     <div className="flex flex-col w-1/3 bg-gray-900/50 border border-gray-700 rounded-lg p-3 space-y-3">
-      <Touchscreen deckId={deckId} useStore={useStore} />
+      <Touchscreen
+        deckId={deckId}
+        useStore={useStore}
+        playlist={playlist}
+        onSelectTrack={handleSelectTrack}
+        onFileSelected={handleFileSelected}
+      />
       <div className="flex-grow flex items-center justify-center gap-2">
         <JogWheel deckId={deckId} useStore={useStore} />
         <div className="h-48 flex flex-col items-center">
@@ -129,19 +133,6 @@ const Player: React.FC<PlayerProps> = ({ deckId, useStore }) => {
         >
           <i className="fa fa-sync"></i>
         </button>
-        <button
-            onClick={handleUploadClick}
-            className="w-1/4 py-4 rounded bg-gray-800 hover:bg-gray-700 border border-gray-600 text-lg"
-        >
-            <i className="fa fa-upload"></i>
-        </button>
-        <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileChange}
-            accept=".mp3"
-            className="hidden"
-        />
       </div>
     </div>
   );

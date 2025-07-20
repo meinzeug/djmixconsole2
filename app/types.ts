@@ -6,6 +6,12 @@ export interface Track {
   waveform: number[];
   duration: number;
   bpm: number;
+  /** Estimated audio bitrate in kbps */
+  bitrate: number;
+  /** Musical key of the track if detected */
+  key?: string;
+  /** Optional artwork URL extracted from metadata */
+  artwork?: string;
 }
 
 export interface HotCue {
