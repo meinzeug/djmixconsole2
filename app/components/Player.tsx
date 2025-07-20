@@ -11,9 +11,8 @@ interface PlayerProps {
 }
 
 const Player: React.FC<PlayerProps> = ({ deckId, useStore }) => {
-  const { players } = useStore.getState();
-  const playerState = players[deckId];
-  const { loadTrack, togglePlay, setHotCue, jumpToHotCue, deleteHotCue } = useStore.getState().actions;
+  const playerState = (useStore as any)((state: DjStore) => state.players[deckId]);
+  const { loadTrack, togglePlay, setHotCue, jumpToHotCue, deleteHotCue } = (useStore as any)((state: DjStore) => state.actions);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 

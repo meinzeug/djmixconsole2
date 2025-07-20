@@ -102,6 +102,7 @@ const useStore = create<DjStore>()(
         } else {
           const source = audioContext.createBufferSource();
           source.buffer = track.buffer;
+          source.playbackRate.value = get().players[deckId].pitch;
           source.connect(playerNodes[deckId].gain);
           source.start(0, playbackTime);
           playerNodes[deckId].source = source;
@@ -210,11 +211,14 @@ const useStore = create<DjStore>()(
 useStore.subscribe(state => {
   masterGain.gain.value = state.mixer.masterVolume;
   for (let i = 0; i < 2; i++) {
-      const channelId = i + 1;
-      const channelFader = state.mixer.channels[channelId].fader;
-      const crossfader = state.mixer.crossfader;
-      const crossfaderGain = i === 0 ? Math.max(0, 1 - crossfader) : Math.max(0, 1 + crossfader);
-      playerNodes[i].gain.gain.value = channelFader * Math.min(1, crossfaderGain);
+    const channelId = i + 1;
+    const channel = state.mixer.channels[channelId];
+    const cross = i === 0
+      ? (1 - state.mixer.crossfader) / 2
+      : (1 + state.mixer.crossfader) / 2;
+
+    const volume = state.players[i].volume;
+    playerNodes[i].gain.gain.value = volume * channel.gain * channel.fader * cross;
   }
 });
 
@@ -237,7 +241,11 @@ const useDjEngine = () => {
     return () => clearInterval(interval);
   }, []);
 
-  return { store: useStore as StoreApi<DjStore>, isReady: !!audioContext };
+  return {
+    store: useStore as StoreApi<DjStore>,
+    useStore,
+    isReady: !!audioContext,
+  };
 };
 
 export default useDjEngine;

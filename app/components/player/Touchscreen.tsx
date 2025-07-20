@@ -10,8 +10,7 @@ interface TouchscreenProps {
 
 const Touchscreen: React.FC<TouchscreenProps> = ({ deckId, useStore }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const { players } = useStore.getState();
-  const playerState = players[deckId];
+  const playerState = (useStore as any)((state: DjStore) => state.players[deckId]);
   const { track, playbackTime } = playerState;
   const deckColor = deckId === 0 ? '#06b6d4' : '#f43f5e'; // cyan-500, red-500
 

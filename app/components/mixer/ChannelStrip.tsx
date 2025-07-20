@@ -12,9 +12,10 @@ interface ChannelStripProps {
 }
 
 const ChannelStrip: React.FC<ChannelStripProps> = ({ channelId, useStore, deckColor }) => {
-  const { mixer, activeChannel } = useStore.getState();
+  const mixer = (useStore as any)((state: DjStore) => state.mixer);
+  const activeChannel = (useStore as any)((state: DjStore) => state.activeChannel);
   const channelState = mixer.channels[channelId];
-  const { setChannelGain, setChannelEq, setChannelFader, toggleChannelCue } = useStore.getState().actions;
+  const { setChannelGain, setChannelEq, setChannelFader, toggleChannelCue } = (useStore as any)((state: DjStore) => state.actions);
   const isActive = activeChannel === channelId;
 
   return (
