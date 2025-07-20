@@ -1,0 +1,6 @@
+{
+  "name": "AI DJ Mix Console",
+  "description": "A fully functional DJ mixing application that simulates two CDJ-3000 players and a DJM-A9 mixer. Control the decks and mixer entirely with your keyboard, load your own MP3s, and perform seamless mixes with real-time waveform visualization, EQs, and effects.",
+  "requestFramePermissions": [],
+  "prompt": ""
+}

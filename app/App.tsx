@@ -1,0 +1,105 @@
+
+import React, { useEffect, useState, useCallback } from 'react';
+import Player from './components/Player';
+import Mixer from './components/Mixer';
+import useDjEngine from './hooks/useDjEngine';
+import type { DjStore } from './types';
+
+const App: React.FC = () => {
+  const { store, isReady } = useDjEngine();
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  const handleInit = () => {
+    store.getState().actions.initAudio();
+    setIsInitialized(true);
+  };
+  
+  const handleKeydown = useCallback((e: KeyboardEvent) => {
+    if (!isInitialized) return;
+
+    const { actions, activeChannel } = store.getState();
+    const { players, mixer } = store.getState();
+
+    // Prevent browser shortcuts
+    if (e.key === ' ' || e.key === 'Tab' || e.key.startsWith('Arrow')) {
+      e.preventDefault();
+    }
+    
+    // Deck 1 Controls
+    const hotCueKeys1: { [key: string]: number } = { 'q': 0, 'w': 1, 'e': 2, 'r': 3, 't': 4, 'y': 5, 'u': 6, 'i': 7 };
+    if (hotCueKeys1[e.key.toLowerCase()] !== undefined) {
+      if (e.shiftKey) actions.deleteHotCue(0, hotCueKeys1[e.key.toLowerCase()]);
+      else actions.jumpToHotCue(0, hotCueKeys1[e.key.toLowerCase()]);
+    }
+    if (e.code === 'Space') actions.togglePlay(0);
+    if (e.key.toLowerCase() === 'z') actions.toggleSync(0);
+    if (e.key.toLowerCase() === 'x') actions.setPitch(0, players[0].pitch === 1.0 ? 1.06 : 1.0); // Simplified key shift
+    if (e.key === 'ArrowLeft') actions.setPitch(0, players[0].pitch - 0.01);
+    if (e.key === 'ArrowRight') actions.setPitch(0, players[0].pitch + 0.01);
+
+    // Deck 2 Controls
+    const hotCueKeys2: { [key: string]: number } = { 'u': 0, 'i': 1, 'o': 2, 'p': 3, 'h': 4, 'j': 5, 'k': 6, 'l': 7 };
+     if (hotCueKeys2[e.key.toLowerCase()] !== undefined && players[1].track) {
+        if (e.shiftKey) actions.deleteHotCue(1, hotCueKeys2[e.key.toLowerCase()]);
+        else actions.jumpToHotCue(1, hotCueKeys2[e.key.toLowerCase()]);
+    }
+    if (e.code === 'Enter') actions.togglePlay(1);
+
+    // Mixer Controls
+    if (['1', '2', '3', '4'].includes(e.key)) actions.setActiveChannel(parseInt(e.key));
+    
+    if (e.key === 'ArrowUp') actions.setChannelGain(activeChannel, Math.min(1, mixer.channels[activeChannel].gain + 0.05));
+    if (e.key === 'ArrowDown') actions.setChannelGain(activeChannel, Math.max(0, mixer.channels[activeChannel].gain - 0.05));
+    
+    if (e.key.toLowerCase() === 'r') actions.setChannelEq(activeChannel, 'high', Math.min(1, mixer.channels[activeChannel].eq.high + 0.05));
+    if (e.key.toLowerCase() === 'f') actions.setChannelEq(activeChannel, 'mid', Math.min(1, mixer.channels[activeChannel].eq.mid + 0.05));
+    if (e.key.toLowerCase() === 'v') actions.setChannelEq(activeChannel, 'low', Math.min(1, mixer.channels[activeChannel].eq.low + 0.05));
+    
+    if (e.code === 'Tab') {
+        e.preventDefault();
+        actions.setCrossfader(mixer.crossfader < 0 ? 1 : -1);
+    }
+    
+    if (e.key.toLowerCase() === 'h') actions.toggleChannelCue(activeChannel);
+
+  }, [isInitialized, store]);
+
+  useEffect(() => {
+    window.addEventListener('keydown', handleKeydown);
+    return () => {
+      window.removeEventListener('keydown', handleKeydown);
+    };
+  }, [handleKeydown]);
+
+  if (!isInitialized) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gray-900 text-white">
+        <div className="text-center p-8 border-2 border-cyan-500 rounded-lg shadow-[0_0_15px_rgba(0,255,255,0.5)]">
+          <h1 className="text-4xl font-bold mb-4 text-cyan-400">AI DJ Mix Console</h1>
+          <p className="mb-8 text-gray-300">Click to start the audio engine and enter the DJ booth.</p>
+          <button
+            onClick={handleInit}
+            className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-[0_0_10px_rgba(0,255,255,0.4)]"
+          >
+            Start Session
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-900 bg-opacity-90 bg-[radial-gradient(#111_1px,transparent_1px)] [background-size:16px_16px] text-white flex flex-col items-center justify-center p-2 font-sans overflow-hidden">
+      <div className="w-full max-w-[1800px] flex justify-between gap-2 p-4 bg-black/50 rounded-xl border border-gray-700 shadow-2xl shadow-cyan-500/10">
+        <Player deckId={0} useStore={store} />
+        <Mixer useStore={store} />
+        <Player deckId={1} useStore={store} />
+      </div>
+      <footer className="text-gray-500 text-xs mt-4">
+          <p>AI DJ Mix Console. Based on Pioneer DJ CDJ-3000 & DJM-A9. Keyboard controls are active.</p>
+      </footer>
+    </div>
+  );
+};
+
+export default App;

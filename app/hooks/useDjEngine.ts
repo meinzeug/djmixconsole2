@@ -1,0 +1,243 @@
+import { useEffect } from 'react';
+import { create, StoreApi } from 'zustand';
+import { immer } from 'zustand/middleware/immer';
+import type { DjStore, State } from '../types';
+import { processAudioBuffer } from '../utils/audioUtils';
+
+// AudioNodes can't be stored in Zustand state directly. We manage them here.
+const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+const masterGain = audioContext.createGain();
+let mediaRecorder: MediaRecorder | null = null;
+let audioChunks: Blob[] = [];
+
+interface AudioNodes {
+  source: AudioBufferSourceNode | null;
+  gain: GainNode;
+  panner: StereoPannerNode;
+  eq: { high: BiquadFilterNode; mid: BiquadFilterNode; low: BiquadFilterNode };
+}
+const playerNodes: AudioNodes[] = [];
+
+const useStore = create<DjStore>()(
+  immer((set, get) => ({
+    players: [createInitialPlayerState(), createInitialPlayerState()],
+    mixer: createInitialMixerState(),
+    activeChannel: 1,
+    isRecording: false,
+    actions: {
+      initAudio: () => {
+        if (audioContext.state === 'suspended') {
+          audioContext.resume();
+        }
+        if (!playerNodes.length) {
+          masterGain.connect(audioContext.destination);
+          for (let i = 0; i < 2; i++) {
+              playerNodes[i] = createPlayerAudioNodes();
+          }
+        }
+      },
+      loadTrack: async (deckId, file) => {
+        if (get().players[deckId].isPlaying) {
+            playerNodes[deckId].source?.stop();
+        }
+        const arrayBuffer = await file.arrayBuffer();
+        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+        const waveform = processAudioBuffer(audioBuffer);
+        set(state => {
+          state.players[deckId].track = {
+            name: file.name,
+            url: URL.createObjectURL(file),
+            buffer: audioBuffer,
+            waveform,
+            duration: audioBuffer.duration,
+          };
+          state.players[deckId].playbackTime = 0;
+          state.players[deckId].isPlaying = false;
+        });
+      },
+      togglePlay: (deckId) => {
+        const { isPlaying, track, playbackTime } = get().players[deckId];
+        if (!track) return;
+
+        if (isPlaying) {
+          playerNodes[deckId].source?.stop();
+          set(state => { state.players[deckId].isPlaying = false; });
+        } else {
+          const source = audioContext.createBufferSource();
+          source.buffer = track.buffer;
+          source.connect(playerNodes[deckId].gain);
+          source.start(0, playbackTime);
+          playerNodes[deckId].source = source;
+          (playerNodes[deckId].source as any)._startTime = audioContext.currentTime;
+          set(state => { state.players[deckId].isPlaying = true; });
+        }
+      },
+      seek: (deckId, time) => {
+        set(state => {
+          state.players[deckId].playbackTime = time;
+        });
+        if (get().players[deckId].isPlaying) {
+           get().actions.togglePlay(deckId);
+           get().actions.togglePlay(deckId);
+        }
+      },
+      setPitch: (deckId, pitch) => {
+         set(state => {
+          state.players[deckId].pitch = pitch;
+         });
+         if(playerNodes[deckId].source){
+             playerNodes[deckId].source!.playbackRate.value = pitch;
+         }
+      },
+      setVolume: (deckId, volume) => {
+        set(state => { state.players[deckId].volume = volume; });
+      },
+      toggleSync: (deckId) => {
+         set(state => { state.players[deckId].isSync = !state.players[deckId].isSync; });
+      },
+      setHotCue: (deckId, cueId) => {
+          const { playbackTime, hotCues } = get().players[deckId];
+          const newCues = hotCues.filter(c => c.id !== cueId);
+          newCues.push({id: cueId, time: playbackTime});
+          set(state => { state.players[deckId].hotCues = newCues });
+      },
+      deleteHotCue: (deckId, cueId) => {
+           set(state => {
+               state.players[deckId].hotCues = state.players[deckId].hotCues.filter(c => c.id !== cueId);
+           });
+      },
+      jumpToHotCue: (deckId, cueId) => {
+          const cue = get().players[deckId].hotCues.find(c => c.id === cueId);
+          if (cue) {
+              get().actions.seek(deckId, cue.time);
+          }
+      },
+      setLoop: () => {},
+      clearLoop: () => {},
+      setMasterVolume: (volume) => set(state => { state.mixer.masterVolume = volume; }),
+      setCrossfader: (value) => set(state => { state.mixer.crossfader = value; }),
+      setChannelGain: (channelId, gain) => {
+          const deckId = channelId - 1;
+          if (deckId >= 0 && deckId < 2) {
+              set(state => { state.mixer.channels[channelId].gain = gain; });
+          }
+      },
+      setChannelEq: (channelId, band, value) => {
+           const deckId = channelId - 1;
+           if (deckId >= 0 && deckId < 2) {
+              set(state => { state.mixer.channels[channelId].eq[band] = value; });
+              const dbValue = (value - 0.5) * 40;
+              playerNodes[deckId].eq[band].gain.setValueAtTime(dbValue, audioContext.currentTime);
+           }
+      },
+      setChannelFader: (channelId, value) => {
+          const deckId = channelId - 1;
+          if (deckId >= 0 && deckId < 2) {
+              set(state => { state.mixer.channels[channelId].fader = value; });
+          }
+      },
+      toggleChannelCue: (channelId) => set(state => { state.mixer.channels[channelId].cue = !state.mixer.channels[channelId].cue; }),
+      setActiveChannel: (channelId) => set({ activeChannel: channelId }),
+      toggleRecording: () => {
+          const { isRecording } = get();
+          if (isRecording) {
+              mediaRecorder?.stop();
+          } else {
+              const destination = audioContext.createMediaStreamDestination();
+              masterGain.connect(destination);
+              mediaRecorder = new MediaRecorder(destination.stream);
+              mediaRecorder.start();
+              mediaRecorder.ondataavailable = event => {
+                  audioChunks.push(event.data);
+              };
+              mediaRecorder.onstop = () => {
+                  const blob = new Blob(audioChunks, { type: 'audio/wav' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.style.display = 'none';
+                  a.href = url;
+                  a.download = `dj-mix-${new Date().toISOString()}.wav`;
+                  document.body.appendChild(a);
+                  a.click();
+                  window.URL.revokeObjectURL(url);
+                  audioChunks = [];
+                  masterGain.disconnect(destination);
+              };
+          }
+          set({ isRecording: !isRecording });
+      },
+    },
+  }))
+);
+
+useStore.subscribe(state => {
+  masterGain.gain.value = state.mixer.masterVolume;
+  for (let i = 0; i < 2; i++) {
+      const channelId = i + 1;
+      const channelFader = state.mixer.channels[channelId].fader;
+      const crossfader = state.mixer.crossfader;
+      const crossfaderGain = i === 0 ? Math.max(0, 1 - crossfader) : Math.max(0, 1 + crossfader);
+      playerNodes[i].gain.gain.value = channelFader * Math.min(1, crossfaderGain);
+  }
+});
+
+const useDjEngine = () => {
+  useEffect(() => {
+    const interval = setInterval(() => {
+      useStore.getState().players.forEach((player, deckId) => {
+        if (player.isPlaying && playerNodes[deckId].source && player.track) {
+          useStore.setState(state => {
+            const sourceNode = playerNodes[deckId].source as any;
+            if (sourceNode._startTime) {
+              const playedDuration = audioContext.currentTime - sourceNode._startTime;
+              state.players[deckId].playbackTime = (state.players[deckId].playbackTime + playedDuration) % player.track!.duration;
+              sourceNode._startTime = audioContext.currentTime;
+            }
+          });
+        }
+      })
+    }, 100);
+    return () => clearInterval(interval);
+  }, []);
+
+  return { store: useStore as StoreApi<DjStore>, isReady: !!audioContext };
+};
+
+const createInitialPlayerState = (): State['players'][0] => ({
+  track: null,
+  isPlaying: false,
+  playbackTime: 0,
+  volume: 1,
+  pitch: 1.0,
+  hotCues: [],
+  activeLoop: null,
+  isSync: false,
+});
+
+const createInitialMixerState = (): State['mixer'] => ({
+  masterVolume: 0.8,
+  crossfader: 0,
+  channels: {
+    1: { gain: 0.5, eq: { high: 0.5, mid: 0.5, low: 0.5 }, fader: 1, cue: false },
+    2: { gain: 0.5, eq: { high: 0.5, mid: 0.5, low: 0.5 }, fader: 1, cue: false },
+    3: { gain: 0.5, eq: { high: 0.5, mid: 0.5, low: 0.5 }, fader: 0, cue: false },
+    4: { gain: 0.5, eq: { high: 0.5, mid: 0.5, low: 0.5 }, fader: 0, cue: false },
+  },
+});
+
+const createPlayerAudioNodes = (): AudioNodes => {
+    const gain = audioContext.createGain();
+    const panner = audioContext.createStereoPanner();
+    const high = audioContext.createBiquadFilter();
+    high.type = 'highshelf'; high.frequency.value = 10000;
+    const mid = audioContext.createBiquadFilter();
+    mid.type = 'peaking'; mid.frequency.value = 1000; mid.Q.value = 0.5;
+    const low = audioContext.createBiquadFilter();
+    low.type = 'lowshelf'; low.frequency.value = 200;
+
+    gain.connect(low).connect(mid).connect(high).connect(panner).connect(masterGain);
+    
+    return { source: null, gain, panner, eq: { high, mid, low } };
+}
+
+export default useDjEngine;
