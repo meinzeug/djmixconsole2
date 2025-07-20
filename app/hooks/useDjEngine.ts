@@ -165,8 +165,14 @@ const useStore = create<DjStore>()(
               get().actions.seek(deckId, cue.time);
           }
       },
-      setLoop: () => {},
-      clearLoop: () => {},
+      setLoop: (deckId, start, end) => {
+        set(state => {
+          state.players[deckId].activeLoop = { start, end };
+        });
+      },
+      clearLoop: (deckId) => {
+        set(state => { state.players[deckId].activeLoop = null; });
+      },
       setMasterVolume: (volume) => set(state => { state.mixer.masterVolume = volume; }),
       setCrossfader: (value) => set(state => { state.mixer.crossfader = value; }),
       setMasterBpm: (bpm) => {
@@ -282,7 +288,23 @@ const useDjEngine = () => {
             const sourceNode = playerNodes[deckId].source as any;
             if (sourceNode._startTime) {
               const playedDuration = audioContext.currentTime - sourceNode._startTime;
-              state.players[deckId].playbackTime = (state.players[deckId].playbackTime + playedDuration) % player.track!.duration;
+              let newTime = state.players[deckId].playbackTime + playedDuration;
+              const loop = state.players[deckId].activeLoop;
+              if (loop) {
+                const length = loop.end - loop.start;
+                if (newTime > loop.end) {
+                  newTime = loop.start + ((newTime - loop.start) % length);
+                  playerNodes[deckId].source?.stop();
+                  const src = audioContext.createBufferSource();
+                  src.buffer = player.track!.buffer;
+                  src.playbackRate.value = state.players[deckId].pitch;
+                  src.connect(playerNodes[deckId].gain);
+                  src.start(0, newTime);
+                  playerNodes[deckId].source = src;
+                  (playerNodes[deckId].source as any)._startTime = audioContext.currentTime;
+                }
+              }
+              state.players[deckId].playbackTime = newTime % player.track!.duration;
               sourceNode._startTime = audioContext.currentTime;
             }
           });

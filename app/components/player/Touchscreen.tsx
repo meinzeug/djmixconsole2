@@ -11,7 +11,7 @@ interface TouchscreenProps {
 const Touchscreen: React.FC<TouchscreenProps> = ({ deckId, useStore }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const playerState = (useStore as any)((state: DjStore) => state.players[deckId]);
-  const { track, playbackTime } = playerState;
+  const { track, playbackTime, bpm, pitch } = playerState;
   const deckColor = deckId === 0 ? '#06b6d4' : '#f43f5e'; // cyan-500, red-500
 
   useEffect(() => {
@@ -73,6 +73,11 @@ const Touchscreen: React.FC<TouchscreenProps> = ({ deckId, useStore }) => {
       <div className="absolute top-2 left-2 text-xs text-white bg-black/50 p-1 rounded">
         {track ? track.name : 'No Track Loaded'}
       </div>
+      {track && (
+        <div className="absolute top-2 right-2 text-xs text-white bg-black/50 p-1 rounded">
+          {Math.round(bpm)} BPM | {(pitch * 100).toFixed(1)}%
+        </div>
+      )}
       <div className="absolute bottom-2 right-2 text-lg font-mono font-bold text-white bg-black/50 p-1 rounded">
         {track ? `${formatTime(playbackTime)} / ${formatTime(track.duration)}` : '0:00 / 0:00'}
       </div>
