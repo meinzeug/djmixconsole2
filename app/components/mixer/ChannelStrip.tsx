@@ -13,15 +13,18 @@ interface ChannelStripProps {
 
 const ChannelStrip: React.FC<ChannelStripProps> = ({ channelId, useStore, deckColor }) => {
   const mixer = (useStore as any)((state: DjStore) => state.mixer);
+  const fx = (useStore as any)((state: DjStore) => state.fx);
   const activeChannel = (useStore as any)((state: DjStore) => state.activeChannel);
   const channelState = mixer.channels[channelId];
-  const { setChannelGain, setChannelEq, setChannelFader, toggleChannelCue } = (useStore as any)((state: DjStore) => state.actions);
+  const colorAmount = fx.colorFxAmount[channelId] || 0;
+  const { setChannelGain, setChannelEq, setChannelFader, toggleChannelCue, setColorFxAmount } = (useStore as any)((state: DjStore) => state.actions);
   const isActive = activeChannel === channelId;
 
   return (
     <div className={`w-1/4 h-full flex flex-col items-center p-2 space-y-4 rounded-md border ${isActive ? `border-${deckColor}-500 shadow-[0_0_10px_var(--tw-shadow-color)] shadow-${deckColor}-500/50` : 'border-gray-700'}`}>
         <span className={`text-xs font-bold ${isActive ? `text-${deckColor}-400` : 'text-gray-400'}`}>CH {channelId}</span>
         <Knob label="GAIN" value={channelState.gain} onChange={(v) => setChannelGain(channelId, v)} />
+        <Knob label="COLOR" value={(colorAmount + 1) / 2} onChange={(v) => setColorFxAmount(channelId, v * 2 - 1)} />
         <Knob label="HIGH" value={channelState.eq.high} onChange={(v) => setChannelEq(channelId, 'high', v)} />
         <Knob label="MID" value={channelState.eq.mid} onChange={(v) => setChannelEq(channelId, 'mid', v)} />
         <Knob label="LOW" value={channelState.eq.low} onChange={(v) => setChannelEq(channelId, 'low', v)} />

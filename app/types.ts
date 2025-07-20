@@ -42,6 +42,11 @@ export interface MixerState {
   masterVolume: number;
   crossfader: number; // -1 (left) to 1 (right)
   masterBpm: number;
+  master: {
+    gain: number;
+    eq: { high: number; mid: number; low: number };
+    fader: number;
+  };
   channels: {
     [key: number]: {
       gain: number;
@@ -52,8 +57,20 @@ export interface MixerState {
       };
       fader: number;
       cue: boolean;
-    };
   };
+};
+
+export interface FXState {
+  colorFxType: string;
+  colorFxAmount: { [channel: number]: number };
+  beatFx: {
+    active: boolean;
+    effect: string;
+    target: string; // CH1, CH2, Master
+    beatLength: number;
+    depth: number;
+  };
+}
 }
 
 export interface DjStore extends State {
@@ -63,6 +80,7 @@ export interface DjStore extends State {
 export interface State {
   players: PlayerState[];
   mixer: MixerState;
+  fx: FXState;
   activeChannel: number;
   isRecording: boolean;
 }
@@ -83,12 +101,22 @@ export interface Actions {
   clearLoop: (deckId: number) => void;
 
   setMasterVolume: (volume: number) => void;
+  setMasterGain: (value: number) => void;
+  setMasterEq: (band: 'high' | 'mid' | 'low', value: number) => void;
   setCrossfader: (value: number) => void;
   setChannelGain: (channelId: number, gain: number) => void;
   setChannelEq: (channelId: number, band: 'high' | 'mid' | 'low', value: number) => void;
   setChannelFader: (channelId: number, value: number) => void;
   toggleChannelCue: (channelId: number) => void;
   setActiveChannel: (channelId: number) => void;
+
+  setColorFxType: (type: string) => void;
+  setColorFxAmount: (channelId: number, amount: number) => void;
+  setBeatFxActive: (active: boolean) => void;
+  setBeatFxEffect: (effect: string) => void;
+  setBeatFxTarget: (target: string) => void;
+  setBeatFxBeatLength: (len: number) => void;
+  setBeatFxDepth: (depth: number) => void;
 
   setMasterBpm: (bpm: number) => void;
   syncPlayers: () => void;
