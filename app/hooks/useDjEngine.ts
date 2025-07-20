@@ -18,6 +18,43 @@ interface AudioNodes {
 }
 const playerNodes: AudioNodes[] = [];
 
+const createInitialPlayerState = (): State['players'][0] => ({
+  track: null,
+  isPlaying: false,
+  playbackTime: 0,
+  volume: 1,
+  pitch: 1.0,
+  hotCues: [],
+  activeLoop: null,
+  isSync: false,
+});
+
+const createInitialMixerState = (): State['mixer'] => ({
+  masterVolume: 0.8,
+  crossfader: 0,
+  channels: {
+    1: { gain: 0.5, eq: { high: 0.5, mid: 0.5, low: 0.5 }, fader: 1, cue: false },
+    2: { gain: 0.5, eq: { high: 0.5, mid: 0.5, low: 0.5 }, fader: 1, cue: false },
+    3: { gain: 0.5, eq: { high: 0.5, mid: 0.5, low: 0.5 }, fader: 0, cue: false },
+    4: { gain: 0.5, eq: { high: 0.5, mid: 0.5, low: 0.5 }, fader: 0, cue: false },
+  },
+});
+
+const createPlayerAudioNodes = (): AudioNodes => {
+    const gain = audioContext.createGain();
+    const panner = audioContext.createStereoPanner();
+    const high = audioContext.createBiquadFilter();
+    high.type = 'highshelf'; high.frequency.value = 10000;
+    const mid = audioContext.createBiquadFilter();
+    mid.type = 'peaking'; mid.frequency.value = 1000; mid.Q.value = 0.5;
+    const low = audioContext.createBiquadFilter();
+    low.type = 'lowshelf'; low.frequency.value = 200;
+
+    gain.connect(low).connect(mid).connect(high).connect(panner).connect(masterGain);
+    
+    return { source: null, gain, panner, eq: { high, mid, low } };
+}
+
 const useStore = create<DjStore>()(
   immer((set, get) => ({
     players: [createInitialPlayerState(), createInitialPlayerState()],
@@ -202,42 +239,5 @@ const useDjEngine = () => {
 
   return { store: useStore as StoreApi<DjStore>, isReady: !!audioContext };
 };
-
-const createInitialPlayerState = (): State['players'][0] => ({
-  track: null,
-  isPlaying: false,
-  playbackTime: 0,
-  volume: 1,
-  pitch: 1.0,
-  hotCues: [],
-  activeLoop: null,
-  isSync: false,
-});
-
-const createInitialMixerState = (): State['mixer'] => ({
-  masterVolume: 0.8,
-  crossfader: 0,
-  channels: {
-    1: { gain: 0.5, eq: { high: 0.5, mid: 0.5, low: 0.5 }, fader: 1, cue: false },
-    2: { gain: 0.5, eq: { high: 0.5, mid: 0.5, low: 0.5 }, fader: 1, cue: false },
-    3: { gain: 0.5, eq: { high: 0.5, mid: 0.5, low: 0.5 }, fader: 0, cue: false },
-    4: { gain: 0.5, eq: { high: 0.5, mid: 0.5, low: 0.5 }, fader: 0, cue: false },
-  },
-});
-
-const createPlayerAudioNodes = (): AudioNodes => {
-    const gain = audioContext.createGain();
-    const panner = audioContext.createStereoPanner();
-    const high = audioContext.createBiquadFilter();
-    high.type = 'highshelf'; high.frequency.value = 10000;
-    const mid = audioContext.createBiquadFilter();
-    mid.type = 'peaking'; mid.frequency.value = 1000; mid.Q.value = 0.5;
-    const low = audioContext.createBiquadFilter();
-    low.type = 'lowshelf'; low.frequency.value = 200;
-
-    gain.connect(low).connect(mid).connect(high).connect(panner).connect(masterGain);
-    
-    return { source: null, gain, panner, eq: { high, mid, low } };
-}
 
 export default useDjEngine;
