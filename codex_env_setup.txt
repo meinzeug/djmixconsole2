@@ -1,0 +1,17 @@
+#!/bin/bash
+# Setup environment for DJ Mix Console 2 in Codex
+set -e
+
+# Install Node.js 22 if not already available
+if ! command -v node >/dev/null || ! node --version | grep -q '^v22'; then
+  apt-get update
+  curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+  apt-get install -y nodejs
+fi
+
+# Install project dependencies and build the front end
+cd app
+npm install
+# Ensure optional peer dependencies are present
+npm install immer
+npm run build
