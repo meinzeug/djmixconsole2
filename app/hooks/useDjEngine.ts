@@ -86,6 +86,7 @@ const useStore = create<DjStore>()(
         playerNodes[deckId].source = null;
         const arrayBuffer = await file.arrayBuffer();
         const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+        const bitrate = Math.round((file.size * 8) / (audioBuffer.duration * 1000));
         const waveform = processAudioBuffer(audioBuffer);
         let bpm = 120;
         try {
@@ -101,6 +102,9 @@ const useStore = create<DjStore>()(
             waveform,
             duration: audioBuffer.duration,
             bpm,
+            bitrate,
+            key: undefined,
+            artwork: undefined,
           };
           state.players[deckId].playbackTime = 0;
           state.players[deckId].isPlaying = false;
