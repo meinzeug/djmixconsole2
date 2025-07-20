@@ -9,8 +9,7 @@ interface JogWheelProps {
 }
 
 const JogWheel: React.FC<JogWheelProps> = ({ deckId, useStore }) => {
-  const { players } = useStore.getState();
-  const playerState = players[deckId];
+  const playerState = (useStore as any)((state: DjStore) => state.players[deckId]);
   const { track, isPlaying, pitch } = playerState;
   
   const deckColor = deckId === 0 ? 'cyan' : 'red';

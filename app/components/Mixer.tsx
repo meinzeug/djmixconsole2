@@ -10,8 +10,9 @@ interface MixerProps {
 }
 
 const Mixer: React.FC<MixerProps> = ({ useStore }) => {
-  const { mixer, isRecording } = useStore.getState();
-  const { setCrossfader, toggleRecording } = useStore.getState().actions;
+  const mixer = (useStore as any)((state: DjStore) => state.mixer);
+  const isRecording = (useStore as any)((state: DjStore) => state.isRecording);
+  const { setCrossfader, toggleRecording } = (useStore as any)((state: DjStore) => state.actions);
 
   return (
     <div className="flex flex-col w-1/3 bg-gray-900/50 border border-gray-700 rounded-lg p-3 space-y-4">
