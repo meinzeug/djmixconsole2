@@ -173,6 +173,8 @@ const useStore = create<DjStore>()(
 
         if (isPlaying) {
           playerNodes[deckId].source?.stop();
+          playerNodes[deckId].source?.disconnect();
+          playerNodes[deckId].source = null;
           set(state => { state.players[deckId].isPlaying = false; });
           const st = get();
           if (st.clock.masterDeckId === deckId) {
@@ -206,9 +208,17 @@ const useStore = create<DjStore>()(
         set(state => {
           state.players[deckId].playbackTime = time;
         });
-        if (get().players[deckId].isPlaying) {
-           get().actions.togglePlay(deckId);
-           get().actions.togglePlay(deckId);
+        const player = get().players[deckId];
+        if (player.isPlaying && player.track) {
+          playerNodes[deckId].source?.stop();
+          playerNodes[deckId].source?.disconnect();
+          const src = audioContext.createBufferSource();
+          src.buffer = player.track.buffer;
+          src.playbackRate.value = player.pitch;
+          src.connect(playerNodes[deckId].gain);
+          src.start(0, time);
+          playerNodes[deckId].source = src;
+          (playerNodes[deckId].source as any)._startTime = audioContext.currentTime;
         }
       },
       setPitch: (deckId, pitch) => {
@@ -266,16 +276,17 @@ const useStore = create<DjStore>()(
                s.players[deckId].isSync = true;
                s.players[deckId].playbackTime = newTime;
              });
-             if (state.players[deckId].isPlaying) {
-               playerNodes[deckId].source?.stop();
-               const src = audioContext.createBufferSource();
-               src.buffer = state.players[deckId].track!.buffer;
-               src.playbackRate.value = state.players[deckId].pitch;
-               src.connect(playerNodes[deckId].gain);
-               src.start(0, newTime);
-               playerNodes[deckId].source = src;
-               (playerNodes[deckId].source as any)._startTime = audioContext.currentTime;
-             }
+            if (state.players[deckId].isPlaying) {
+              playerNodes[deckId].source?.stop();
+              playerNodes[deckId].source?.disconnect();
+              const src = audioContext.createBufferSource();
+              src.buffer = state.players[deckId].track!.buffer;
+              src.playbackRate.value = state.players[deckId].pitch;
+              src.connect(playerNodes[deckId].gain);
+              src.start(0, newTime);
+              playerNodes[deckId].source = src;
+              (playerNodes[deckId].source as any)._startTime = audioContext.currentTime;
+            }
            }
          }
       },
@@ -335,6 +346,7 @@ const useStore = create<DjStore>()(
           set(s => { s.players[other].playbackTime = newTime; });
           if (state.players[other].isPlaying) {
             playerNodes[other].source?.stop();
+            playerNodes[other].source?.disconnect();
             const source = audioContext.createBufferSource();
             source.buffer = state.players[other].track!.buffer;
             source.playbackRate.value = state.players[other].pitch;
@@ -468,6 +480,7 @@ const useDjEngine = () => {
                 if (newTime > loop.end) {
                   newTime = loop.start + ((newTime - loop.start) % length);
                   playerNodes[deckId].source?.stop();
+                  playerNodes[deckId].source?.disconnect();
                   const src = audioContext.createBufferSource();
                   src.buffer = player.track!.buffer;
                   src.playbackRate.value = state.players[deckId].pitch;
@@ -503,6 +516,7 @@ const useDjEngine = () => {
                 newT = ((newT % d) + d) % d;
                 state.players[i].playbackTime = newT;
                 playerNodes[i].source?.stop();
+                playerNodes[i].source?.disconnect();
                 const src = audioContext.createBufferSource();
                 src.buffer = p.track!.buffer;
                 src.playbackRate.value = state.players[i].pitch;
