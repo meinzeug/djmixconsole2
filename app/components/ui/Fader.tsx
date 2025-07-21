@@ -22,8 +22,8 @@ const Fader: React.FC<FaderProps> = ({ value, onChange, orientation = 'vertical'
         onChange={(e) => onChange(parseFloat(e.target.value))}
         className="w-full h-full appearance-none bg-transparent cursor-pointer"
         style={{
-          writingMode: isVertical ? 'bt-lr' : 'lr',
-          WebkitAppearance: isVertical ? 'slider-vertical' : 'slider-horizontal',
+          writingMode: isVertical ? 'vertical-lr' : 'horizontal-tb',
+          direction: isVertical ? 'rtl' : 'ltr',
           '--thumb-bg': '#4b5563', // gray-600
           '--thumb-border': '#374151', // gray-700
         } as React.CSSProperties}
