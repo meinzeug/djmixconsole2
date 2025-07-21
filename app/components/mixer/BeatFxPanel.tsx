@@ -1,5 +1,5 @@
 import React from 'react';
-import type { StoreApi } from 'zustand';
+import type { UseBoundStore } from 'zustand';
 import type { DjStore } from '../../types';
 import Fader from '../ui/Fader';
 
@@ -10,7 +10,7 @@ const effects = [
 ];
 
 interface Props {
-  useStore: StoreApi<DjStore>;
+  useStore: UseBoundStore<DjStore>;
 }
 
 const BeatFxPanel: React.FC<Props> = ({ useStore }) => {
