@@ -20,7 +20,9 @@ const Knob: React.FC<KnobProps> = ({ label, value, onChange }) => {
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
     if (isDragging) {
       const delta = -e.movementY;
-      const newValue = Math.max(0, Math.min(1, value + delta * 0.005));
+      // Increase sensitivity so the full range can be reached with less
+      // mouse movement.
+      const newValue = Math.max(0, Math.min(1, value + delta * 0.01));
       onChange(newValue);
     }
   }, [isDragging, onChange, value]);
