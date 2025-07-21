@@ -25,6 +25,10 @@ const Knob: React.FC<KnobProps> = ({ label, value, onChange }) => {
     }
   }, [isDragging, onChange, value]);
 
+  const handleDoubleClick = useCallback(() => {
+    onChange(0.5);
+  }, [onChange]);
+
   useEffect(() => {
     const up = () => setIsDragging(false);
     window.addEventListener('mouseup', up);
@@ -35,11 +39,12 @@ const Knob: React.FC<KnobProps> = ({ label, value, onChange }) => {
 
   return (
     <div className="flex flex-col items-center space-y-1 select-none" onMouseMove={handleMouseMove} onMouseLeave={handleMouseUp}>
-      <div 
+      <div
         className="w-10 h-10 bg-gray-700 rounded-full border-2 border-gray-600 flex items-center justify-center cursor-pointer"
         onMouseDown={handleMouseDown}
+        onDoubleClick={handleDoubleClick}
       >
-        <div 
+        <div
           className="w-8 h-8 rounded-full bg-gray-800 relative"
           style={{ transform: `rotate(${rotation}deg)` }}
         >
