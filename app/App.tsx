@@ -9,7 +9,17 @@ const App: React.FC = () => {
   const { store, isReady } = useDjEngine();
 
   useEffect(() => {
-    store.getState().actions.initAudio();
+    const init = () => {
+      store.getState().actions.initAudio();
+      window.removeEventListener("pointerdown", init);
+      window.removeEventListener("keydown", init);
+    };
+    window.addEventListener("pointerdown", init);
+    window.addEventListener("keydown", init);
+    return () => {
+      window.removeEventListener("pointerdown", init);
+      window.removeEventListener("keydown", init);
+    };
   }, [store]);
 
   const handleKeydown = useCallback(
