@@ -66,7 +66,9 @@ export interface MixerState {
       fader: number;
       cue: boolean;
   };
+  };
 };
+
 
 export interface FXState {
   colorFxType: string;
