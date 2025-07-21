@@ -12,7 +12,7 @@ interface PlayerProps {
 
 const Player: React.FC<PlayerProps> = ({ deckId, useStore }) => {
   const playerState = (useStore as any)((state: DjStore) => state.players[deckId]);
-  const { loadTrack, togglePlay, setPitch, setPitchRange, setHotCue, jumpToHotCue, deleteHotCue, setLoop, clearLoop, toggleSync, syncPlayers } =
+  const { loadTrack, togglePlay, setPitch, setPitchRange, setHotCue, jumpToHotCue, deleteHotCue, setLoop, clearLoop, toggleSync, syncPlayers, setMasterDeck, seek } =
     (useStore as any)((state: DjStore) => state.actions);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -38,6 +38,11 @@ const Player: React.FC<PlayerProps> = ({ deckId, useStore }) => {
     const start = playerState.playbackTime;
     const end = start + beats * beatLength;
     setLoop(deckId, start, end);
+  };
+
+  const handleCue = () => {
+    if (playerState.isPlaying) togglePlay(deckId);
+    seek(deckId, 0);
   };
 
   return (
@@ -115,10 +120,16 @@ const Player: React.FC<PlayerProps> = ({ deckId, useStore }) => {
         >Clear</button>
       </div>
       
-      <div className="flex items-center justify-between gap-2">
+      <div className="grid grid-cols-4 gap-2">
+        <button
+          onClick={handleCue}
+          className="py-4 rounded bg-gray-800 border border-gray-600 text-lg hover:bg-gray-700"
+        >
+          CUE
+        </button>
         <button
           onClick={() => togglePlay(deckId)}
-          className={`w-1/4 py-4 rounded text-lg font-bold ${
+          className={`py-4 rounded text-lg font-bold ${
             playerState.isPlaying ? `bg-${deckColor}-600 animate-pulse` : `bg-gray-800`
           } border border-${deckColor}-500`}
         >
@@ -126,15 +137,15 @@ const Player: React.FC<PlayerProps> = ({ deckId, useStore }) => {
         </button>
         <button
           onClick={() => toggleSync(deckId)}
-          className="w-1/4 py-4 rounded bg-gray-800 hover:bg-gray-700 border border-gray-600 text-lg"
+          className="py-4 rounded bg-gray-800 hover:bg-gray-700 border border-gray-600 text-lg"
         >
           SYNC
         </button>
         <button
-          onClick={() => syncPlayers()}
-          className="w-1/4 py-4 rounded bg-gray-800 hover:bg-gray-700 border border-gray-600 text-lg"
+          onClick={() => setMasterDeck(deckId)}
+          className="py-4 rounded bg-gray-800 hover:bg-gray-700 border border-gray-600 text-lg"
         >
-          <i className="fa fa-sync"></i>
+          MASTER
         </button>
       </div>
     </div>

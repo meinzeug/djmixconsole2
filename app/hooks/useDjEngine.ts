@@ -4,6 +4,7 @@ import { immer } from 'zustand/middleware/immer';
 import type { DjStore, State, FXState } from '../types';
 import { processAudioBuffer } from '../utils/audioUtils';
 import detectBpm from 'bpm-detective';
+import { parseBlob } from 'music-metadata-browser';
 
 // AudioNodes can't be stored in Zustand state directly. We manage them here.
 const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -143,6 +144,18 @@ const useStore = create<DjStore>()(
         const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
         const bitrate = Math.round((file.size * 8) / (audioBuffer.duration * 1000));
         const waveform = processAudioBuffer(audioBuffer);
+        let key: string | undefined = undefined;
+        let artwork: string | undefined = undefined;
+        try {
+          const meta = await parseBlob(file);
+          key = meta.common.key as string | undefined;
+          if (meta.common.picture && meta.common.picture[0]) {
+            const pic = meta.common.picture[0];
+            artwork = URL.createObjectURL(new Blob([pic.data], { type: pic.format }));
+          }
+        } catch {
+          // ignore metadata errors
+        }
         let bpm = 120;
         try {
           bpm = detectBpm(audioBuffer);
@@ -158,8 +171,8 @@ const useStore = create<DjStore>()(
             duration: audioBuffer.duration,
             bpm,
             bitrate,
-            key: undefined,
-            artwork: undefined,
+            key,
+            artwork,
           };
           state.players[deckId].playbackTime = 0;
           state.players[deckId].isPlaying = false;

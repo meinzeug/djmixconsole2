@@ -6,6 +6,7 @@ import ChannelStrip from './mixer/ChannelStrip';
 import MasterChannel from './mixer/MasterChannel';
 import BeatFxPanel from './mixer/BeatFxPanel';
 import Fader from './ui/Fader';
+import MasterClock from './Clock/MasterClock';
 
 interface MixerProps {
   useStore: StoreApi<DjStore>;
@@ -14,11 +15,8 @@ interface MixerProps {
 const Mixer: React.FC<MixerProps> = ({ useStore }) => {
   const mixer = (useStore as any)((state: DjStore) => state.mixer);
   const fx = (useStore as any)((state: DjStore) => state.fx);
-  const isRecording = (useStore as any)((state: DjStore) => state.isRecording);
-  const { setCrossfader, toggleRecording, setMasterBpm, syncPlayers, setColorFxType, startClock, stopClock } =
+  const { setCrossfader, setColorFxType } =
     (useStore as any)((state: DjStore) => state.actions);
-  const clockRunning = (useStore as any)((state: DjStore) => state.clock.running);
-  const masterBpm = mixer.masterBpm;
 
   return (
     <div className="flex flex-col w-1/3 bg-gray-900/50 border border-gray-700 rounded-lg p-3 space-y-4">
@@ -50,41 +48,7 @@ const Mixer: React.FC<MixerProps> = ({ useStore }) => {
         <div className="text-xs font-bold text-red-400">CH 2</div>
       </div>
       
-      <div className="flex items-center justify-center p-2 border-t border-gray-700 space-x-2">
-         <input
-            type="number"
-            value={masterBpm}
-            onChange={(e) => {
-              const v = parseFloat(e.target.value);
-              if (!isNaN(v)) setMasterBpm(v);
-            }}
-            className="w-20 text-center bg-gray-800 text-white py-1 rounded border border-gray-600"
-         />
-         <button
-            onClick={syncPlayers}
-            className="px-4 py-2 rounded-md bg-gray-700 text-gray-300 hover:bg-cyan-800 font-bold flex items-center gap-2"
-         >
-            <i className="fa fa-sync"></i>
-            SYNC
-         </button>
-         <button
-            onClick={clockRunning ? stopClock : startClock}
-            className="px-4 py-2 rounded-md bg-gray-700 text-gray-300 hover:bg-cyan-800 font-bold"
-         >
-            {clockRunning ? 'STOP' : 'START'}
-         </button>
-         <button
-            onClick={toggleRecording}
-            className={`px-4 py-2 rounded-md flex items-center gap-2 font-bold transition-colors ${
-              isRecording
-              ? 'bg-red-600 text-white animate-pulse'
-              : 'bg-gray-700 text-gray-300 hover:bg-red-800'
-            }`}
-          >
-            <i className={`fa-solid fa-circle ${isRecording ? 'text-white' : 'text-red-500'}`}></i>
-            {isRecording ? 'REC' : 'REC'}
-        </button>
-      </div>
+      <MasterClock useStore={useStore} />
     </div>
   );
 };
