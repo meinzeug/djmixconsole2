@@ -79,6 +79,13 @@ const createInitialFxState = (): FXState => ({
   },
 });
 
+const createInitialClockState = (): State['clock'] => ({
+  bpm: 120,
+  beatPhase: 0,
+  running: false,
+  masterDeckId: null,
+});
+
 const createPlayerAudioNodes = (): AudioNodes => {
     const gain = audioContext.createGain();
     const panner = audioContext.createStereoPanner();
@@ -111,6 +118,7 @@ const useStore = create<DjStore>()(
     players: [createInitialPlayerState(), createInitialPlayerState()],
     mixer: createInitialMixerState(),
     fx: createInitialFxState(),
+    clock: createInitialClockState(),
     activeChannel: 1,
     isRecording: false,
     actions: {
@@ -166,6 +174,15 @@ const useStore = create<DjStore>()(
         if (isPlaying) {
           playerNodes[deckId].source?.stop();
           set(state => { state.players[deckId].isPlaying = false; });
+          const st = get();
+          if (st.clock.masterDeckId === deckId) {
+            const other = deckId === 0 ? 1 : 0;
+            if (st.players[other].isPlaying) {
+              set(s => { s.clock.masterDeckId = other; });
+            } else {
+              set(s => { s.clock.masterDeckId = null; s.clock.running = false; });
+            }
+          }
         } else {
           const source = audioContext.createBufferSource();
           source.buffer = track.buffer;
@@ -175,6 +192,14 @@ const useStore = create<DjStore>()(
           playerNodes[deckId].source = source;
           (playerNodes[deckId].source as any)._startTime = audioContext.currentTime;
           set(state => { state.players[deckId].isPlaying = true; });
+          const st = get();
+          if (st.clock.masterDeckId === null) {
+            set(s => {
+              s.clock.masterDeckId = deckId;
+              s.clock.running = true;
+              s.clock.bpm = s.mixer.masterBpm;
+            });
+          }
         }
       },
       seek: (deckId, time) => {
@@ -214,7 +239,45 @@ const useStore = create<DjStore>()(
         set(state => { state.players[deckId].volume = volume; });
       },
       toggleSync: (deckId) => {
-         set(state => { state.players[deckId].isSync = !state.players[deckId].isSync; });
+         const state = get();
+         const isCurrentlySync = state.players[deckId].isSync;
+         if (isCurrentlySync) {
+           set(s => { s.players[deckId].isSync = false; });
+           if (state.clock.masterDeckId === deckId) {
+             set(s => { s.clock.masterDeckId = null; s.clock.running = false; });
+           }
+         } else {
+           if (state.clock.masterDeckId === null) {
+             set(s => {
+               s.players[deckId].isSync = true;
+               s.clock.masterDeckId = deckId;
+               s.clock.running = true;
+               s.clock.bpm = s.mixer.masterBpm;
+               const beat = 60 / s.clock.bpm;
+               s.clock.beatPhase = s.players[deckId].playbackTime % beat;
+             });
+           } else {
+             const beat = 60 / state.clock.bpm;
+             const diff = state.clock.beatPhase - (state.players[deckId].playbackTime % beat);
+             let newTime = state.players[deckId].playbackTime + diff;
+             const dur = state.players[deckId].track?.duration || 0;
+             newTime = ((newTime % dur) + dur) % dur;
+             set(s => {
+               s.players[deckId].isSync = true;
+               s.players[deckId].playbackTime = newTime;
+             });
+             if (state.players[deckId].isPlaying) {
+               playerNodes[deckId].source?.stop();
+               const src = audioContext.createBufferSource();
+               src.buffer = state.players[deckId].track!.buffer;
+               src.playbackRate.value = state.players[deckId].pitch;
+               src.connect(playerNodes[deckId].gain);
+               src.start(0, newTime);
+               playerNodes[deckId].source = src;
+               (playerNodes[deckId].source as any)._startTime = audioContext.currentTime;
+             }
+           }
+         }
       },
       setHotCue: (deckId, cueId) => {
           const { playbackTime, hotCues } = get().players[deckId];
@@ -246,7 +309,7 @@ const useStore = create<DjStore>()(
       setMasterEq: (band, value) => set(state => { state.mixer.master.eq[band] = value; }),
       setCrossfader: (value) => set(state => { state.mixer.crossfader = value; }),
       setMasterBpm: (bpm) => {
-          set(state => { state.mixer.masterBpm = bpm; });
+          set(state => { state.mixer.masterBpm = bpm; state.clock.bpm = bpm; });
           get().players.forEach((player, deckId) => {
             if (player.track) {
               const newPitch = bpm / player.bpm;
@@ -278,8 +341,17 @@ const useStore = create<DjStore>()(
             source.connect(playerNodes[other].gain);
             source.start(0, newTime);
             playerNodes[other].source = source;
-            (playerNodes[other].source as any)._startTime = audioContext.currentTime;
-          }
+          (playerNodes[other].source as any)._startTime = audioContext.currentTime;
+        }
+      },
+      startClock: () => {
+        set(state => { state.clock.running = true; state.clock.beatPhase = 0; });
+      },
+      stopClock: () => {
+        set(state => { state.clock.running = false; state.clock.masterDeckId = null; });
+      },
+      setMasterDeck: (deckId) => {
+        set(state => { state.clock.masterDeckId = deckId; });
       },
       setChannelGain: (channelId, gain) => {
           const deckId = channelId - 1;
@@ -377,7 +449,12 @@ useStore.subscribe(state => {
 
 const useDjEngine = () => {
   useEffect(() => {
+    let last = performance.now();
     const interval = setInterval(() => {
+      const now = performance.now();
+      const delta = (now - last) / 1000;
+      last = now;
+
       useStore.getState().players.forEach((player, deckId) => {
         if (player.isPlaying && playerNodes[deckId].source && player.track) {
           useStore.setState(state => {
@@ -405,7 +482,39 @@ const useDjEngine = () => {
             }
           });
         }
-      })
+      });
+
+      useStore.setState(state => {
+        if (state.clock.running) {
+          const beatLen = 60 / state.clock.bpm;
+          if (state.clock.masterDeckId !== null) {
+            state.clock.beatPhase = state.players[state.clock.masterDeckId].playbackTime % beatLen;
+          } else {
+            state.clock.beatPhase = (state.clock.beatPhase + delta) % beatLen;
+          }
+
+          state.players.forEach((p, i) => {
+            if (p.isSync && i !== state.clock.masterDeckId && p.track) {
+              const phase = p.playbackTime % beatLen;
+              const diff = state.clock.beatPhase - phase;
+              if (Math.abs(diff) > 0.01) {
+                let newT = p.playbackTime + diff;
+                const d = p.track.duration;
+                newT = ((newT % d) + d) % d;
+                state.players[i].playbackTime = newT;
+                playerNodes[i].source?.stop();
+                const src = audioContext.createBufferSource();
+                src.buffer = p.track!.buffer;
+                src.playbackRate.value = state.players[i].pitch;
+                src.connect(playerNodes[i].gain);
+                src.start(0, newT);
+                playerNodes[i].source = src;
+                (playerNodes[i].source as any)._startTime = audioContext.currentTime;
+              }
+            }
+          });
+        }
+      });
     }, 100);
     return () => clearInterval(interval);
   }, []);
