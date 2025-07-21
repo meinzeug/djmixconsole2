@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { create, StoreApi } from 'zustand';
+import { create, StoreApi, UseBoundStore } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import type { DjStore, State, FXState } from '../types';
 import { processAudioBuffer } from '../utils/audioUtils';
@@ -548,7 +548,7 @@ const useDjEngine = () => {
 
   return {
     store: useStore as StoreApi<DjStore>,
-    useStore,
+    useStore: useStore as UseBoundStore<DjStore>,
     isReady: !!audioContext,
   };
 };

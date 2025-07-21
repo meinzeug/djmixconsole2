@@ -1,9 +1,9 @@
 import React from 'react';
-import type { StoreApi } from 'zustand';
+import type { UseBoundStore } from 'zustand';
 import type { DjStore } from '../../types';
 
 interface Props {
-  useStore: StoreApi<DjStore>;
+  useStore: UseBoundStore<DjStore>;
 }
 
 const MasterClock: React.FC<Props> = ({ useStore }) => {

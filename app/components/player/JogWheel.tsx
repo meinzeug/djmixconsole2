@@ -1,11 +1,11 @@
 
 import React, { useRef, useState } from 'react';
-import type { StoreApi } from 'zustand';
+import type { UseBoundStore } from 'zustand';
 import type { DjStore } from '../../types';
 
 interface JogWheelProps {
   deckId: number;
-  useStore: StoreApi<DjStore>;
+  useStore: UseBoundStore<DjStore>;
 }
 
 const JogWheel: React.FC<JogWheelProps> = ({ deckId, useStore }) => {

@@ -1,11 +1,11 @@
 
 import React, { useEffect, useRef, useState, ChangeEvent } from 'react';
-import type { StoreApi } from 'zustand';
+import type { UseBoundStore } from 'zustand';
 import type { DjStore } from '../../types';
 
 interface TouchscreenProps {
   deckId: number;
-  useStore: StoreApi<DjStore>;
+  useStore: UseBoundStore<DjStore>;
   playlist: File[];
   onSelectTrack: (file: File) => void;
   onFileSelected: (file: File) => void;

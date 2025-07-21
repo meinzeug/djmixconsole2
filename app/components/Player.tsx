@@ -1,13 +1,13 @@
 
 import React, { useRef, ChangeEvent } from 'react';
-import type { StoreApi } from 'zustand';
+import type { UseBoundStore } from 'zustand';
 import type { DjStore } from '../types';
 import JogWheel from './player/JogWheel';
 import Fader from './ui/Fader';
 
 interface PlayerProps {
   deckId: number;
-  useStore: StoreApi<DjStore>;
+  useStore: UseBoundStore<DjStore>;
 }
 
 const Player: React.FC<PlayerProps> = ({ deckId, useStore }) => {
