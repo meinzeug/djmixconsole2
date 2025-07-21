@@ -59,6 +59,7 @@ Eine moderne, browserbasierte DJ-App in React (TypeScript), die den Pioneer XDJ-
 - Nur Web Audio API (keine Drittanbieter-Audio-Libs)
 - Routing: Deck → FX → Mixer-Kanal → Master → RecorderNode
 - Zustand mit Zustand.js managen: `bpm`, `fxState`, `recordingState`, `activeLoop`, `hotCues`
+- Bei neuen Abhängigkeiten muss `install.sh` in den Modi `install`, `update` und `reinstall` angepasst werden
 
 ---
 
