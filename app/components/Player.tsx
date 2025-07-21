@@ -1,8 +1,7 @@
 
-import React, { useState } from 'react';
+import React, { useRef, ChangeEvent } from 'react';
 import type { StoreApi } from 'zustand';
 import type { DjStore } from '../types';
-import Touchscreen from './player/Touchscreen';
 import JogWheel from './player/JogWheel';
 import Fader from './ui/Fader';
 
@@ -13,18 +12,16 @@ interface PlayerProps {
 
 const Player: React.FC<PlayerProps> = ({ deckId, useStore }) => {
   const playerState = (useStore as any)((state: DjStore) => state.players[deckId]);
-  const { loadTrack, togglePlay, setPitch, setPitchRange, nudge, setHotCue, jumpToHotCue, deleteHotCue, setLoop, clearLoop, toggleSync, syncPlayers } =
+  const { loadTrack, togglePlay, setPitch, setPitchRange, setHotCue, jumpToHotCue, deleteHotCue, setLoop, clearLoop, toggleSync, syncPlayers } =
     (useStore as any)((state: DjStore) => state.actions);
 
-  const [playlist, setPlaylist] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleSelectTrack = (file: File) => {
-    loadTrack(deckId, file);
-  };
-
-  const handleFileSelected = (file: File) => {
-    setPlaylist(p => [...p, file]);
-    loadTrack(deckId, file);
+  const handleFileSelected = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      loadTrack(deckId, file);
+    }
   };
 
   const deckColor = deckId === 0 ? 'cyan' : 'red';
@@ -45,13 +42,19 @@ const Player: React.FC<PlayerProps> = ({ deckId, useStore }) => {
 
   return (
     <div className="flex flex-col w-1/3 bg-gray-900/50 border border-gray-700 rounded-lg p-3 space-y-3">
-      <Touchscreen
-        deckId={deckId}
-        useStore={useStore}
-        playlist={playlist}
-        onSelectTrack={handleSelectTrack}
-        onFileSelected={handleFileSelected}
-      />
+      <div className="flex justify-center">
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          className="px-3 py-1 text-xs bg-gray-700 rounded hover:bg-gray-600"
+        >Load Track</button>
+        <input
+          type="file"
+          accept=".mp3"
+          ref={fileInputRef}
+          onChange={handleFileSelected}
+          className="hidden"
+        />
+      </div>
       <div className="flex-grow flex items-center justify-center gap-2">
         <JogWheel deckId={deckId} useStore={useStore} />
         <div className="h-48 flex flex-col items-center">

@@ -2,6 +2,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import Player from './components/Player';
 import Mixer from './components/Mixer';
+import { CentralDisplay } from './components/CentralDisplay';
 import useDjEngine from './hooks/useDjEngine';
 import type { DjStore } from './types';
 
@@ -90,10 +91,13 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-900 bg-opacity-90 bg-[radial-gradient(#111_1px,transparent_1px)] [background-size:16px_16px] text-white flex flex-col items-center justify-center p-2 font-sans overflow-hidden">
-      <div className="w-full max-w-[1800px] flex justify-between gap-2 p-4 bg-black/50 rounded-xl border border-gray-700 shadow-2xl shadow-cyan-500/10">
-        <Player deckId={0} useStore={store} />
-        <Mixer useStore={store} />
-        <Player deckId={1} useStore={store} />
+      <div className="w-full max-w-[1800px] flex flex-col items-center gap-2 p-4 bg-black/50 rounded-xl border border-gray-700 shadow-2xl shadow-cyan-500/10">
+        <CentralDisplay useStore={store} />
+        <div className="w-full flex justify-between gap-2">
+          <Player deckId={0} useStore={store} />
+          <Mixer useStore={store} />
+          <Player deckId={1} useStore={store} />
+        </div>
       </div>
       <footer className="text-gray-500 text-xs mt-4">
           <p>AI DJ Mix Console. Based on Pioneer DJ CDJ-3000 & DJM-A9. Keyboard controls are active.</p>
