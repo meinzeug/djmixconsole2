@@ -16,6 +16,7 @@ const Touchscreen: React.FC<TouchscreenProps> = ({ deckId, useStore, playlist, o
   const fileInputRef = useRef<HTMLInputElement>(null);
   const playerState = (useStore as any)((state: DjStore) => state.players[deckId]);
   const { track, playbackTime, bpm, pitch, isSync } = playerState;
+  const isMaster = (useStore as any)((state: DjStore) => state.clock.masterDeckId === deckId);
   const { seek, setLoop, clearLoop } = (useStore as any)((state: DjStore) => state.actions);
   const deckColor = deckId === 0 ? '#06b6d4' : '#f43f5e'; // cyan-500, red-500
   const [zoom, setZoom] = useState(1);
@@ -147,7 +148,8 @@ const Touchscreen: React.FC<TouchscreenProps> = ({ deckId, useStore, playlist, o
       {track && (
         <div className="absolute top-1 right-2 text-xs text-white bg-black/50 px-1 rounded flex items-center gap-1">
           {Math.round(bpm * pitch)} BPM | {(pitch * 100).toFixed(1)}% | {track.bitrate} kbps
-          {isSync && <i className="fa fa-link text-cyan-400"></i>}
+          {isMaster && <span className="text-yellow-400 font-bold">MASTER</span>}
+          {isSync && !isMaster && <i className="fa fa-link text-cyan-400"></i>}
         </div>
       )}
       {track && (

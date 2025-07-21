@@ -24,6 +24,14 @@ export interface Loop {
   end: number;
 }
 
+export interface MasterClock {
+  bpm: number;
+  /** position within current beat in seconds */
+  beatPhase: number;
+  running: boolean;
+  masterDeckId: number | null;
+}
+
 export interface PlayerState {
   track: Track | null;
   isPlaying: boolean;
@@ -71,7 +79,6 @@ export interface FXState {
     depth: number;
   };
 }
-}
 
 export interface DjStore extends State {
   actions: Actions;
@@ -81,6 +88,7 @@ export interface State {
   players: PlayerState[];
   mixer: MixerState;
   fx: FXState;
+  clock: MasterClock;
   activeChannel: number;
   isRecording: boolean;
 }
@@ -120,6 +128,10 @@ export interface Actions {
 
   setMasterBpm: (bpm: number) => void;
   syncPlayers: () => void;
+
+  startClock: () => void;
+  stopClock: () => void;
+  setMasterDeck: (deckId: number | null) => void;
 
   toggleRecording: () => void;
   initAudio: () => void;

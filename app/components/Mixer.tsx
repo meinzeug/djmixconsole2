@@ -15,7 +15,9 @@ const Mixer: React.FC<MixerProps> = ({ useStore }) => {
   const mixer = (useStore as any)((state: DjStore) => state.mixer);
   const fx = (useStore as any)((state: DjStore) => state.fx);
   const isRecording = (useStore as any)((state: DjStore) => state.isRecording);
-  const { setCrossfader, toggleRecording, setMasterBpm, syncPlayers, setColorFxType } = (useStore as any)((state: DjStore) => state.actions);
+  const { setCrossfader, toggleRecording, setMasterBpm, syncPlayers, setColorFxType, startClock, stopClock } =
+    (useStore as any)((state: DjStore) => state.actions);
+  const clockRunning = (useStore as any)((state: DjStore) => state.clock.running);
   const masterBpm = mixer.masterBpm;
 
   return (
@@ -64,6 +66,12 @@ const Mixer: React.FC<MixerProps> = ({ useStore }) => {
          >
             <i className="fa fa-sync"></i>
             SYNC
+         </button>
+         <button
+            onClick={clockRunning ? stopClock : startClock}
+            className="px-4 py-2 rounded-md bg-gray-700 text-gray-300 hover:bg-cyan-800 font-bold"
+         >
+            {clockRunning ? 'STOP' : 'START'}
          </button>
          <button
             onClick={toggleRecording}
