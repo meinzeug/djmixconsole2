@@ -1,13 +1,13 @@
 
 import React from 'react';
-import type { StoreApi } from 'zustand';
+import type { UseBoundStore } from 'zustand';
 import type { DjStore } from '../../types';
 import Knob from '../ui/Knob';
 import Fader from '../ui/Fader';
 
 interface ChannelStripProps {
   channelId: number;
-  useStore: StoreApi<DjStore>;
+  useStore: UseBoundStore<DjStore>;
   deckColor: 'cyan' | 'red';
 }
 

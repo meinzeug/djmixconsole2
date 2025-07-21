@@ -1,6 +1,6 @@
 
 import React from 'react';
-import type { StoreApi } from 'zustand';
+import type { UseBoundStore } from 'zustand';
 import type { DjStore } from '../types';
 import ChannelStrip from './mixer/ChannelStrip';
 import MasterChannel from './mixer/MasterChannel';
@@ -9,7 +9,7 @@ import Fader from './ui/Fader';
 import MasterClock from './Clock/MasterClock';
 
 interface MixerProps {
-  useStore: StoreApi<DjStore>;
+  useStore: UseBoundStore<DjStore>;
 }
 
 const Mixer: React.FC<MixerProps> = ({ useStore }) => {

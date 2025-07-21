@@ -1,11 +1,11 @@
 import React from 'react';
-import type { StoreApi } from 'zustand';
+import type { UseBoundStore } from 'zustand';
 import type { DjStore } from '../../types';
 import TrackInfo from './TrackInfo';
 import DualWaveform from './DualWaveform';
 
 interface Props {
-  useStore: StoreApi<DjStore>;
+  useStore: UseBoundStore<DjStore>;
 }
 
 const CentralDisplay: React.FC<Props> = ({ useStore }) => (

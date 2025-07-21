@@ -1,10 +1,10 @@
 import React from 'react';
-import type { StoreApi } from 'zustand';
+import type { UseBoundStore } from 'zustand';
 import type { DjStore } from '../../types';
 
 interface Props {
   deck: 'left' | 'right';
-  useStore: StoreApi<DjStore>;
+  useStore: UseBoundStore<DjStore>;
 }
 
 const TrackInfo: React.FC<Props> = ({ deck, useStore }) => {
