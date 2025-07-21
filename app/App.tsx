@@ -20,7 +20,7 @@ const App: React.FC = () => {
       window.removeEventListener("pointerdown", init);
       window.removeEventListener("keydown", init);
     };
-  }, [store]);
+  }, []);
 
   const handleKeydown = useCallback(
     (e: KeyboardEvent) => {
@@ -113,7 +113,7 @@ const App: React.FC = () => {
 
       if (e.key.toLowerCase() === "h") actions.toggleChannelCue(activeChannel);
     },
-    [store],
+    [],
   );
 
   useEffect(() => {
