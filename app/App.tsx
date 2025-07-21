@@ -6,11 +6,11 @@ import useDjEngine from "./hooks/useDjEngine";
 import type { DjStore } from "./types";
 
 const App: React.FC = () => {
-  const { store, isReady } = useDjEngine();
+  const { useStore, isReady } = useDjEngine();
 
   useEffect(() => {
     const init = () => {
-      store.getState().actions.initAudio();
+      useStore.getState().actions.initAudio();
       window.removeEventListener("pointerdown", init);
       window.removeEventListener("keydown", init);
     };
@@ -24,8 +24,8 @@ const App: React.FC = () => {
 
   const handleKeydown = useCallback(
     (e: KeyboardEvent) => {
-      const { actions, activeChannel } = store.getState();
-      const { players, mixer } = store.getState();
+      const { actions, activeChannel } = useStore.getState();
+      const { players, mixer } = useStore.getState();
 
       // Prevent browser shortcuts
       if (e.key === " " || e.key === "Tab" || e.key.startsWith("Arrow")) {
@@ -126,11 +126,11 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-900 bg-opacity-90 bg-[radial-gradient(#111_1px,transparent_1px)] [background-size:16px_16px] text-white flex flex-col items-center justify-center p-2 font-sans overflow-hidden">
       <div className="w-full max-w-[1800px] flex flex-col items-center gap-2 p-4 bg-black/50 rounded-xl border border-gray-700 shadow-2xl shadow-cyan-500/10">
-        <CentralDisplay useStore={store} />
+        <CentralDisplay useStore={useStore} />
         <div className="w-full flex justify-between gap-2">
-          <Player deckId={0} useStore={store} />
-          <Mixer useStore={store} />
-          <Player deckId={1} useStore={store} />
+          <Player deckId={0} useStore={useStore} />
+          <Mixer useStore={useStore} />
+          <Player deckId={1} useStore={useStore} />
         </div>
       </div>
       <footer className="text-gray-500 text-xs mt-4">
